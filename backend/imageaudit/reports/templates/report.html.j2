@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImageAudit report - {{ d.name }}</title>
+<style>
+:root{--bg:#07090d;--panel:#0d1219;--line:#1c2532;--text:#dbe4ef;--muted:#7c8ba1;--accent:#22d3ee;--blue:#3b82f6;
+--critical:#f87171;--high:#fb923c;--medium:#facc15;--low:#60a5fa;--info:#94a3b8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:36px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:13px;margin:0 0 8px;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}.mono{font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;font-size:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.kpi b{display:block;font-size:22px;font-weight:600}.kpi span{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px}
+.sev{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;border:1px solid}
+.sev.critical{color:var(--critical);border-color:var(--critical)}.sev.high{color:var(--high);border-color:var(--high)}
+.sev.medium{color:var(--medium);border-color:var(--medium)}.sev.low{color:var(--low);border-color:var(--low)}.sev.info{color:var(--info);border-color:var(--info)}
+.finding{margin-bottom:10px}.finding summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.finding .cnt{margin-left:auto;color:var(--muted)}
+.rec{margin:8px 0 0;padding:8px 10px;border-left:2px solid var(--accent);background:#0a1620}
+.bar{height:6px;background:#162030;border-radius:3px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--accent)}
+svg .lab{fill:#9fb0c6;font-size:11px}svg .val{fill:#dbe4ef;font-size:11px}
+.hero{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.thumbs figure{margin:0;width:104px}
+.thumbs img{width:104px;height:78px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+.thumbs figcaption{font-size:10.5px;color:var(--muted);word-break:break-all}
+footer{margin-top:40px;color:var(--muted);font-size:12px}
+@media print{body{background:#fff;color:#111}.panel{border-color:#ccc;background:#fff}}
+</style>
+</head>
+<body><main>
+<header>
+  <h1>{{ d.name }}</h1>
+  <div class="muted">ImageAudit report &middot; format: {{ d.format }} &middot; mode: {{ r.mode }} &middot; scanned {{ r.created_at }} &middot; {{ r.duration_s }}s &middot; v{{ r.version }}</div>
+  <div class="muted mono">{{ d.root }}</div>
+</header>
+
+<h2>Dataset overview</h2>
+<div class="grid g4">
+  {% for label, value in kpis %}<div class="panel kpi"><b>{{ value }}</b><span>{{ label }}</span></div>{% endfor %}
+</div>
+<div class="panel" style="margin-top:12px"><h3>Splits</h3>
+<table><tr><th>Split</th><th>Images</th><th>Valid</th><th>Annotations</th><th>Annotated</th><th>Missing labels</th><th>Empty labels</th></tr>
+{% for s in stats.splits %}<tr><td>{{ s.split }}</td><td>{{ s.images }}</td><td>{{ s.valid }}</td><td>{{ s.annotations }}</td><td>{{ s.annotated_images }}</td><td>{{ s.missing_labels }}</td><td>{{ s.empty_labels }}</td></tr>{% endfor %}
+</table></div>
+
+<h2>Health score</h2>
+<div class="panel hero">
+  {{ ring|safe }}
+  <div><div style="font-size:20px;font-weight:600">Grade {{ h.grade or "n/a" }}</div>
+  <div class="muted" style="max-width:420px">Weighted mean of the applicable component scores. Each component is a documented linear penalty on a measured rate (formula v{{ h.formula_version }}).</div></div>
+</div>
+<div class="panel" style="margin-top:12px"><table>
+<tr><th>Component</th><th>Measured</th><th style="width:26%">Score</th><th>Weight</th></tr>
+{% for c in h.components %}<tr>
+  <td>{{ c.label }}<div class="muted" style="font-size:12px">{{ c.description }}</div></td>
+  <td class="mono">{% if c.metric is none %}n/a{% elif c.key == 'class_balance' %}{{ c.metric }}&times;{% else %}{{ '%.2f%%' % (c.metric*100) }}{% endif %}</td>
+  <td>{% if c.applicable %}<div class="bar"><i style="width:{{ c.score }}%"></i></div><span class="mono">{{ c.score }}</span>{% else %}<span class="muted">not applicable</span>{% endif %}</td>
+  <td class="mono">{{ '%.0f%%' % (c.effective_weight*100) }}</td></tr>{% endfor %}
+</table></div>
+
+<h2>Findings ({{ r.findings|length }})</h2>
+{% for f in r.findings %}
+<details class="panel finding"{% if f.severity in ('critical','high') %} open{% endif %}>
+  <summary><span class="sev {{ f.severity }}">{{ f.severity }}</span><strong>{{ f.title }}</strong><span class="cnt mono">{{ f.category }} &middot; {{ f.affected_count }} affected</span></summary>
+  <p>{{ f.description }}</p>
+  {% if f.examples %}<table><tr><th>Example</th><th>Split</th><th>Detail</th></tr>
+  {% for e in f.examples %}<tr><td class="mono">{{ e.path }}</td><td>{{ e.split }}</td><td class="mono">{{ e.detail }}</td></tr>{% endfor %}</table>{% endif %}
+  <div class="rec"><strong>Recommended action:</strong> {{ f.recommendation }}</div>
+</details>
+{% else %}<div class="panel muted">No findings.</div>{% endfor %}
+
+<h2>Class distribution</h2>
+<div class="grid g2">
+<div class="panel">{{ class_chart|safe }}</div>
+<div class="panel"><h3>Balance</h3>
+<table>
+<tr><td>Classes declared / used</td><td class="mono">{{ stats.totals.classes_declared }} / {{ stats.totals.classes_used }}</td></tr>
+<tr><td>Imbalance ratio (max/min, used classes)</td><td class="mono">{{ stats.class_balance.imbalance_ratio if stats.class_balance.imbalance_ratio is not none else 'n/a' }}</td></tr>
+<tr><td>Evenness (normalised entropy)</td><td class="mono">{{ stats.class_balance.evenness if stats.class_balance.evenness is not none else 'n/a' }}</td></tr>
+<tr><td>Unused classes</td><td>{{ stats.class_balance.unused_classes|join(', ') or 'none' }}</td></tr></table></div>
+</div>
+
+<h2>Image statistics</h2>
+<div class="grid g2">
+<div class="panel"><h3>Most common resolutions</h3>{{ res_chart|safe }}</div>
+<div class="panel"><h3>Aspect ratio (w/h)</h3>{{ aspect_chart|safe }}</div>
+</div>
+
+<h2>Annotation statistics</h2>
+<div class="grid g2">
+<div class="panel"><h3>Annotations per image</h3>{{ density_chart|safe }}</div>
+<div class="panel"><h3>Box area (share of image)</h3>{{ box_chart|safe }}</div>
+</div>
+<div class="panel" style="margin-top:12px"><h3>Validation issues by type</h3>
+{% if issue_rows %}<table><tr><th>Issue</th><th>Level</th><th>Count</th></tr>{% for code, level, n in issue_rows %}<tr><td class="mono">{{ code }}</td><td>{{ level }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
+{% else %}<span class="muted">No annotation issues.</span>{% endif %}</div>
+
+<h2>Quality statistics</h2>
+<div class="grid g2">
+<div class="panel"><h3>Sharpness (Laplacian variance)</h3>{{ blur_chart|safe }}<p class="muted">Blur threshold: {{ r.config.quality.blur_threshold }} (heuristic; dataset-dependent).</p></div>
+<div class="panel"><h3>Brightness (mean gray level)</h3>{{ bright_chart|safe }}</div>
+</div>
+<div class="panel" style="margin-top:12px"><h3>Flagged images</h3><table>
+{% for k, v in stats.quality.flag_counts.items() %}<tr><td>{{ k.replace('_',' ') }}</td><td class="mono">{{ v }}</td></tr>{% endfor %}</table></div>
+
+<h2>Duplicate analysis</h2>
+<div class="panel">
+<p>{{ stats.duplicates.groups }} groups &middot; {{ stats.duplicates.exact_groups }} exact (byte-identical) &middot; {{ stats.duplicates.perceptual_groups }} perceptual (near-identical) &middot; {{ stats.duplicates.within_split_groups }} within a split &middot; {{ stats.duplicates.cross_split_groups }} across splits.</p>
+{% for g in groups %}<div style="margin:10px 0"><span class="sev {{ 'critical' if g.scope == 'cross_split' and g.kind == 'exact' else 'high' if g.scope == 'cross_split' else 'low' }}">{{ g.kind }}</span>
+ <span class="muted">{{ g.scope.replace('_',' ') }} &middot; {{ g.splits|join(', ') }}{% if g.kind == 'perceptual' %} &middot; pHash distance ≤ {{ g.max_distance }}{% endif %}</span>
+ <div class="thumbs">{% for m in g.members[:6] %}<figure>{% if thumbs.get(m.image_id) %}<img alt="" src="{{ thumbs[m.image_id] }}">{% endif %}<figcaption>{{ m.path }}<br>{{ m.split }}</figcaption></figure>{% endfor %}</div></div>
+{% else %}<span class="muted">No duplicate groups.</span>{% endfor %}
+{% if r.duplicates|length > groups|length %}<p class="muted">Showing {{ groups|length }} of {{ r.duplicates|length }} groups; the JSON report lists all.</p>{% endif %}
+</div>
+
+<h2>Leakage analysis</h2>
+<div class="panel">
+{% if lk.pairs %}<table><tr><th>Splits</th><th>Exact groups</th><th>Near-duplicate groups</th><th>Images</th></tr>
+{% for p in lk.pairs %}<tr><td><strong>{{ p.a }}</strong> &harr; <strong>{{ p.b }}</strong></td><td>{{ p.exact_groups }}</td><td>{{ p.perceptual_groups }}</td><td>{{ p.images_a }} + {{ p.images_b }}</td></tr>{% endfor %}</table>
+<p>{{ lk.leaked_images }} evaluation images duplicated from another split ({{ '%.1f%%' % ((lk.leakage_rate or 0)*100) }} of {{ lk.eval_images }} val/test images).</p>
+{% elif lk.applicable %}<p>No cross-split duplicates detected.</p>{% else %}<p class="muted">Only one split present; leakage analysis not applicable.</p>{% endif %}
+<p class="muted">{{ lk.note }}</p></div>
+
+<h2>Recommendations</h2>
+<div class="panel"><ol>{% for f in r.findings %}<li><span class="sev {{ f.severity }}">{{ f.severity }}</span> {{ f.recommendation }} <span class="muted">({{ f.title }})</span></li>{% else %}<li>Nothing to fix.</li>{% endfor %}</ol></div>
+
+<footer>Generated locally by ImageAudit. No dataset content left this machine. Blur, exposure and box-size thresholds are heuristics; perceptual hashing detects visual near-duplicates, not semantic similarity.</footer>
+</main></body></html>

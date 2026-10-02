@@ -1,0 +1,10 @@
+# Synthetic ImageAudit sample dataset (intentionally problematic)
+path: .
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: square
+  1: circle
+  2: triangle
+  3: star

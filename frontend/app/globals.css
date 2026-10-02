@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #07090d;
+  color: #e6edf5;
+}
+
+body {
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a4d transparent;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-line bg-ink-1/80 backdrop-blur-sm;
+  }
+  .panel-title {
+    @apply text-sm font-semibold text-fg;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .th {
+    @apply px-3 py-2 text-left text-2xs font-medium text-fg-muted;
+  }
+  .td {
+    @apply px-3 py-2 text-xs text-fg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

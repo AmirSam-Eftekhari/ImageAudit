@@ -1,0 +1,34 @@
+# ImageAudit configuration. Copy to <dataset>/imageaudit.yaml (auto-detected) or pass --config.
+# Every key is optional; unknown keys are rejected so typos fail loudly.
+
+quality:
+  blur_threshold: 100        # Laplacian variance below this => blurry (heuristic; tune per dataset)
+  min_side_px: 64            # shorter side below this => low resolution
+  max_aspect_ratio: 4.0      # max(w/h, h/w) above this => extreme aspect ratio
+  dark_brightness: 35        # mean gray level (0-255) below this => dark
+  bright_brightness: 220     # mean gray level above this => bright
+  low_contrast_std: 20       # gray-level std below this => low contrast
+
+annotations:
+  tiny_box_area: 0.0004      # normalised w*h below this => tiny box
+  large_box_area: 0.95       # normalised w*h above this => suspiciously large box
+  duplicate_iou: 0.95        # same-class boxes with IoU >= this => duplicate annotation
+
+duplicates:
+  enabled: true
+  phash_max_distance: 6      # of 64 bits
+  dhash_max_distance: 10     # confirming hash
+
+scoring:                     # see docs/health-score.md
+  weights:
+    leakage: 30              # example: care more about leakage
+  zero_at:
+    blur: 0.40
+
+ci:                          # used by `imageaudit validate`
+  fail_on: high              # critical | high | medium | low | null
+  fail_under: 70             # health score floor (needs --full)
+  max_corrupt_rate: 0.01
+
+workers: 0                   # 0 = auto
+use_cache: true

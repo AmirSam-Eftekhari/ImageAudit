@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+build/
+dist/
+
+# Node / Next.js
+node_modules/
+.next/
+.next-export/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+
+# ImageAudit runtime data & generated reports
+.imageaudit/
+imageaudit-report/
+*.audit.json
+
+# Packaging artifacts (release binaries belong on GitHub Releases, not in Git)
+*.exe
+
+# OS / editors
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
+logs/

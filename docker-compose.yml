@@ -1,0 +1,21 @@
+# Usage: DATASETS=/path/to/datasets docker compose up --build
+# Datasets are mounted read-only; the API can only scan paths under /datasets.
+services:
+  api:
+    build: ./backend
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      IMAGEAUDIT_ALLOWED_ROOTS: /datasets
+      IMAGEAUDIT_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - ${DATASETS:-./examples}:/datasets:ro
+      - imageaudit-data:/data
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+volumes:
+  imageaudit-data:

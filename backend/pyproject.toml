@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imageaudit"
+version = "0.1.0"
+description = "Local-first dataset quality and diagnostics for computer-vision datasets."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "numpy>=1.26",
+  "pillow>=10.3",
+  "opencv-python-headless>=4.9",
+  "pandas>=2.1",
+  "pyyaml>=6.0",
+  "click>=8.1",
+  "jinja2>=3.1",
+  "reportlab>=4.0",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "python-multipart>=0.0.9",
+  "pydantic>=2.6",
+]
+dev = ["pytest>=8.0", "ruff>=0.5", "httpx>=0.27", "mypy>=1.10", "pandas-stubs", "types-PyYAML"]
+
+[project.scripts]
+imageaudit = "imageaudit.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["imageaudit*"]
+
+[tool.setuptools.package-data]
+imageaudit = ["reports/templates/*.j2"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# Conservative, correctness-oriented rule set. (Formatting/import-order rules are intentionally not
+# enabled: the code base has not been run through `ruff format`.)
+select = ["E", "F", "W", "B", "UP"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = true
